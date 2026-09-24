@@ -7,9 +7,13 @@ import numpy as np
 import yaml
 
 N_PROCESSES = 8
+# libyaml's loader is much faster than the pure Python one, if PyYAML has it
+YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
-if __name__ != "__main__":
+try:
     from . import collision
+except ImportError:  # run as a script (also in multiprocessing workers)
+    import collision
 
 
 def main():
@@ -22,7 +26,7 @@ def main():
     print(args)
 
     with open(args.map) as map_file:
-        roadmap = yaml.safe_load(map_file)
+        roadmap = yaml.load(map_file, Loader=YAML_LOADER)
 
     if "roadmap" not in roadmap:
         print("Not a roadmap file!")
@@ -76,16 +80,16 @@ def compute_edge_conflicts(radius, map):
         np.ndarray, np.ndarray, np.ndarray, np.ndarray  # p0, p1, q0, q1
     ]] = []
     for i in range(0, num_edges):
-        p0 = np.asarray(v_dict[edges[i][0]])
-        p1 = np.asarray(v_dict[edges[i][1]])
+        p0 = np.asarray(v_dict[edges[i][0]], dtype=float)
+        p1 = np.asarray(v_dict[edges[i][1]], dtype=float)
         for j in range(i+1, num_edges):
             if collision.precheck_indices(edges[i], edges[j]):
                 # trivial case
                 conflicts[i].append(j)
                 conflicts[j].append(i)
             else:
-                q0 = np.asarray(v_dict[edges[j][0]])
-                q1 = np.asarray(v_dict[edges[j][1]])
+                q0 = np.asarray(v_dict[edges[j][0]], dtype=float)
+                q1 = np.asarray(v_dict[edges[j][1]], dtype=float)
                 if collision.precheck_bounding_box(E, p0, p1, q0, q1):
                     edges_to_check.append((i, j, E, p0, p1, q0, q1))
 
@@ -102,5 +106,4 @@ def compute_edge_conflicts(radius, map):
 
 
 if __name__ == "__main__":
-    import collision
     main()

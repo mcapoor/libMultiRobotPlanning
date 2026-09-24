@@ -1,0 +1,6 @@
+pyyaml
+numpy
+matplotlib
+
+# only needed for cbs_roadmap with --annotate (tools/annotate_roadmap.py, tools/collision.py)
+cvxpy

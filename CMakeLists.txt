@@ -2,6 +2,14 @@ cmake_minimum_required(VERSION 3.5)
 
 project(libMultiRobotPlanning)
 
+# Without a build type nothing is optimized, which makes cbs_ta and ecbs_ta take
+# minutes on a 32x32 map (all pairs shortest paths, see shortest_path_heuristic.hpp)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    Debug Release RelWithDebInfo MinSizeRel)
+endif()
+
 find_package(Boost 1.58 REQUIRED COMPONENTS program_options)
 find_package(PkgConfig)
 pkg_check_modules(YamlCpp yaml-cpp)
@@ -9,10 +17,10 @@ pkg_check_modules(YamlCpp yaml-cpp)
 # check if Doxygen is installed
 find_package(Doxygen)
 
-if (DOXYGEN_FOUND)
-  # set input and output files
-  set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
-  set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
+set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+
+if (DOXYGEN_FOUND AND EXISTS ${DOXYGEN_IN})
 
   # request to configure the file
   configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
@@ -24,9 +32,9 @@ if (DOXYGEN_FOUND)
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating API documentation with Doxygen"
     VERBATIM )
-else (DOXYGEN_FOUND)
-  message("Doxygen need to be installed to generate the doxygen documentation")
-endif (DOXYGEN_FOUND)
+else ()
+  message("Doxygen and ${DOXYGEN_IN} are needed to generate the doxygen documentation")
+endif ()
 
 # clang-tidy target (linter & static code analysis)
 add_custom_target(clang-tidy
@@ -41,36 +49,33 @@ set(ALL_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/cbs_ta.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/ecbs.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/ecbs_ta.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/mcts.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/neighbor.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/next_best_assignment.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/planresult.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/sipp.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/a_star.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/a_star_epsilon.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/assignment.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/cbs.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/cbs_ta.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/ecbs.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/ecbs_ta.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/mapf_prioritized_sipp.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/next_best_assignment.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/shortest_path_heuristic.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/shortest_path_heuristic.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/sipp.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/example/timer.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/a_star.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/a_star_epsilon.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/assignment.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/cbs.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/cbs_ta.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/ecbs.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/ecbs_ta.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/mapf_prioritized_sipp.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/mcts_nonoverlap.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/next_best_assignment.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/shortest_path_heuristic.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/shortest_path_heuristic.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/sipp.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/timer.hpp
 )
 
 add_custom_target(clang-format
   COMMAND clang-format -i ${ALL_SOURCE_FILES}
 )
 
-# tests
-add_custom_target(run-test
-  COMMAND python3 -m unittest discover -s ${CMAKE_CURRENT_SOURCE_DIR}/test
-)
-
 add_custom_target(everything
-  DEPENDS clang-format clang-tidy docs run-test
+  DEPENDS clang-format clang-tidy docs
 )
 
 # Enable C++14 and warnings
@@ -90,7 +95,7 @@ include_directories(
 
 ## a_star
 add_executable(a_star
-  example/a_star.cpp
+  src/a_star.cpp
 )
 target_link_libraries(a_star
   ${Boost_LIBRARIES}
@@ -98,7 +103,7 @@ target_link_libraries(a_star
 
 ## a_star_epsilon
 add_executable(a_star_epsilon
-  example/a_star_epsilon.cpp
+  src/a_star_epsilon.cpp
 )
 target_link_libraries(a_star_epsilon
   ${Boost_LIBRARIES}
@@ -106,7 +111,7 @@ target_link_libraries(a_star_epsilon
 
 ## assignment
 add_executable(assignment
-  example/assignment.cpp
+  src/assignment.cpp
 )
 target_link_libraries(assignment
   ${Boost_LIBRARIES}
@@ -114,7 +119,7 @@ target_link_libraries(assignment
 
 ## cbs_roadmap
 add_executable(cbs_roadmap
-  example/cbs_roadmap.cpp
+  src/cbs_roadmap.cpp
 )
 target_link_libraries(cbs_roadmap
   ${Boost_LIBRARIES}
@@ -123,7 +128,7 @@ target_link_libraries(cbs_roadmap
 
 ## cbs
 add_executable(cbs
-  example/cbs.cpp
+  src/cbs.cpp
 )
 target_link_libraries(cbs
   ${Boost_LIBRARIES}
@@ -132,7 +137,7 @@ target_link_libraries(cbs
 
 ## cbs_ta
 add_executable(cbs_ta
-  example/cbs_ta.cpp
+  src/cbs_ta.cpp
 )
 target_link_libraries(cbs_ta
   ${Boost_LIBRARIES}
@@ -141,7 +146,7 @@ target_link_libraries(cbs_ta
 
 ## ecbs
 add_executable(ecbs
-  example/ecbs.cpp
+  src/ecbs.cpp
 )
 target_link_libraries(ecbs
   ${Boost_LIBRARIES}
@@ -150,7 +155,7 @@ target_link_libraries(ecbs
 
 ## ecbs_ta
 add_executable(ecbs_ta
-  example/ecbs_ta.cpp
+  src/ecbs_ta.cpp
 )
 target_link_libraries(ecbs_ta
   ${Boost_LIBRARIES}
@@ -159,7 +164,7 @@ target_link_libraries(ecbs_ta
 
 ## next_best_assignment
 add_executable(next_best_assignment
-  example/next_best_assignment.cpp
+  src/next_best_assignment.cpp
 )
 target_link_libraries(next_best_assignment
   ${Boost_LIBRARIES}
@@ -168,7 +173,7 @@ target_link_libraries(next_best_assignment
 
 ## sipp
 add_executable(sipp
-  example/sipp.cpp
+  src/sipp.cpp
 )
 target_link_libraries(sipp
   ${Boost_LIBRARIES}
@@ -177,9 +182,18 @@ target_link_libraries(sipp
 
 ## mapf_prioritized_sipp
 add_executable(mapf_prioritized_sipp
-  example/mapf_prioritized_sipp.cpp
+  src/mapf_prioritized_sipp.cpp
 )
 target_link_libraries(mapf_prioritized_sipp
+  ${Boost_LIBRARIES}
+  yaml-cpp
+)
+
+## mcts_nonoverlap
+add_executable(mcts_nonoverlap
+  src/mcts_nonoverlap.cpp
+)
+target_link_libraries(mcts_nonoverlap
   ${Boost_LIBRARIES}
   yaml-cpp
 )

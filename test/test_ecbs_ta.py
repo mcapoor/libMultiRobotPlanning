@@ -14,7 +14,7 @@ class TestECBSTA(unittest.TestCase):
        check=True)
     if createVideo:
       subprocess.run(
-        ["python3", "../example/visualize.py",
+        ["python3", "../tools/visualize.py",
          inputFile,
          "output.yaml",
          "--video", os.path.splitext(os.path.basename(inputFile))[0] + "_cbs.mp4"],
