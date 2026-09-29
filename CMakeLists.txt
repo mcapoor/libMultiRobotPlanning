@@ -49,7 +49,6 @@ set(ALL_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/cbs_ta.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/ecbs.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/ecbs_ta.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/mcts.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/neighbor.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/next_best_assignment.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/libMultiRobotPlanning/planresult.hpp
@@ -62,7 +61,6 @@ set(ALL_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/ecbs.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/ecbs_ta.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/mapf_prioritized_sipp.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/mcts_nonoverlap.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/next_best_assignment.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/shortest_path_heuristic.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/shortest_path_heuristic.hpp
@@ -185,15 +183,6 @@ add_executable(mapf_prioritized_sipp
   src/mapf_prioritized_sipp.cpp
 )
 target_link_libraries(mapf_prioritized_sipp
-  ${Boost_LIBRARIES}
-  yaml-cpp
-)
-
-## mcts_nonoverlap
-add_executable(mcts_nonoverlap
-  src/mcts_nonoverlap.cpp
-)
-target_link_libraries(mcts_nonoverlap
   ${Boost_LIBRARIES}
   yaml-cpp
 )

@@ -1,6 +1,6 @@
 # libMultiRobotPlanning
 
-A fork of Wolfgang Hönig's [libMultiRobotPlanning](https://github.com/whoenig/libMultiRobotPlanning), a C++14 library of templated search algorithms for multi-robot/multi-agent task and path planning. All of the original algorithms, and the credit for them, belong to the upstream project; this fork adds one solver and reorganizes the repository so that it can be used as a solver library by an external benchmarking harness (see [Changes in this fork](#changes-in-this-fork)).
+A fork of Wolfgang Hönig's [libMultiRobotPlanning](https://github.com/whoenig/libMultiRobotPlanning), a C++14 library of templated search algorithms for multi-robot/multi-agent task and path planning. All of the original algorithms, and the credit for them, belong to the upstream project; this fork reorganizes the repository so that it can be used as a solver library by an external benchmarking harness (see [Changes in this fork](#changes-in-this-fork)).
 
 ## Algorithms
 
@@ -13,7 +13,6 @@ A fork of Wolfgang Hönig's [libMultiRobotPlanning](https://github.com/whoenig/l
   * Enhanced Conflict-Based Search (ECBS)
   * CBS and ECBS with optimal task assignment (CBS-TA, ECBS-TA)
   * Prioritized planning using SIPP
-  * **Monte-Carlo Tree Search for non-overlapping paths (MCTS)**: new in this fork
 * Assignment
   * Minimum sum-of-cost assignment (flow-based; integer costs; any number of agents/tasks)
   * Next-best assignment (series of optimal solutions)
@@ -22,15 +21,12 @@ A fork of Wolfgang Hönig's [libMultiRobotPlanning](https://github.com/whoenig/l
 
 Compared with upstream [`4c75fa2`](https://github.com/whoenig/libMultiRobotPlanning/commit/4c75fa2):
 
-### New solver: `mcts_nonoverlap`
-
-* [`include/libMultiRobotPlanning/mcts.hpp`](include/libMultiRobotPlanning/mcts.hpp): a header-only `MCTS<State, Action, Environment>` template in the style of the other algorithms (UCT selection, uniform random rollouts, exact dead-end detection, restarts). It follows Kiarostami et al., *Multi-Agent non-Overlapping Pathfinding with Monte-Carlo Tree Search* (IEEE, 2019).
-* [`src/mcts_nonoverlap.cpp`](src/mcts_nonoverlap.cpp): the grid instantiation and command-line program. It looks for **vertex-disjoint, static** paths (no time dimension), so it solves a different problem from CBS/ECBS: instances where two agents share a terminal or where paths must cross have no solution for it. Options: `--iterations` (default 100), `--exploration` (default √2), `--attempts` (default 10), `--seed` (default 0).
-
 ### Repository layout
 
 * `example/*.cpp` → `src/`: the command-line programs are the solvers this fork is used for, not just examples.
-* `example/*.py` → `tools/`: `visualize.py`, `visualize_roadmap.py` and `standard_benchmark_converter.py` now sit next to `annotate_roadmap.py` and `collision.py`.
+* `example/*.py` → `tools/`: `visualize_roadmap.py` now sits next to `annotate_roadmap.py` and `collision.py`.
+* Removed `visualize.py` (grid animation): it now lives in the benchmarking project, which uses it for the solutions of every solver library. The tests' `createVideo` option runs it from there (`../../../tools/visualize.py`, relative to `build/`).
+* Removed `standard_benchmark_converter.py` (Moving AI → YAML): it now lives in the benchmarking project, which converts the Moving AI benchmarks for this library.
 * Removed `benchmark/`: the benchmark scenarios now live in the benchmarking project that uses this library as a submodule.
 * Removed the GitHub Actions workflow, `InstallPackagesUbuntu`, `.clang-format`, `.clang-tidy`, `doc/libMultiRobotPlanning.md` and the top-level and `tools/` `__init__.py` files.
 * Added [`requirements.txt`](requirements.txt) for the Python tools.
@@ -44,11 +40,9 @@ Compared with upstream [`4c75fa2`](https://github.com/whoenig/libMultiRobotPlann
 ### Behaviour changes
 
 * `ShortestPathHeuristic` (used by `cbs_ta`/`ecbs_ta`) no longer writes `searchGraph.dot` into the working directory on every run. That file is only useful for debugging, and parallel runs overwrote each other's copy. Pass a file name to the new `dotFile` constructor argument to get it.
-* `tools/visualize.py` also draws each agent's whole path, in its own colour, underneath the agents, and fixes a reference to a global `schedule` variable that only worked when run as a script.
 * `tools/annotate_roadmap.py` works both as a script and when imported (including in its multiprocessing workers), and converts vertex coordinates to floats, so integer roadmaps no longer fail in `tools/collision.py`.
 * `tools/collision.py`: the bounding-box precheck no longer modifies its arrays in place, which failed for integer inputs.
 * The Python tools use PyYAML's C loader when it is available, which is much faster on large schedules.
-* The tests point at `tools/visualize.py` instead of `example/visualize.py`.
 
 ## Layout
 
@@ -56,7 +50,7 @@ Compared with upstream [`4c75fa2`](https://github.com/whoenig/libMultiRobotPlann
 | --- | --- |
 | `include/libMultiRobotPlanning/` | The algorithms, as header-only class templates |
 | `src/` | One command-line program per algorithm, each built into `build/` |
-| `tools/` | Python visualizers, roadmap annotation and the Moving AI converter |
+| `tools/` | Python roadmap visualizer and roadmap annotation |
 | `test/` | Python unit tests and their problem files |
 | `doc/Doxyfile.in` | Doxygen template for the `docs` target |
 
@@ -88,7 +82,6 @@ Every program reads a problem with `-i` and writes the solution with `-o`:
 ```sh
 cd build
 ./ecbs -i ../test/mapf_simple1.yaml -o output.yaml -w 1.3
-python3 ../tools/visualize.py ../test/mapf_simple1.yaml output.yaml
 ```
 
 Run any program with `--help` for its options.
@@ -129,12 +122,8 @@ pip install -r requirements.txt
 
 | Script | Usage |
 | --- | --- |
-| `tools/visualize.py` | `python tools/visualize.py <problem.yaml> <schedule.yaml> [--video FILE] [--speed N]`: animate a grid solution (`<schedule.yaml>` is a solver's `-o` output). Without `--video` the animation opens in a window. |
-| `tools/visualize_roadmap.py` | `python tools/visualize_roadmap.py <roadmap.yaml> <schedule.yaml> [--video FILE] [--speed N] [--radius R]`: the same for roadmap solutions. |
+| `tools/visualize_roadmap.py` | `python tools/visualize_roadmap.py <roadmap.yaml> <schedule.yaml> [--video FILE] [--speed N] [--radius R]`: animate a roadmap solution (`<schedule.yaml>` is `cbs_roadmap`'s `-o` output). Without `--video` the animation opens in a window. Grid solutions are animated by the benchmarking project's `tools/visualize.py`. |
 | `tools/annotate_roadmap.py` | `python tools/annotate_roadmap.py <roadmap.yaml> <annotated.yaml> [radius]`: add edge-collision information for robots of the given radius (default 0.3) so that `cbs_roadmap` can avoid conflicts. Uses 8 processes. |
-| `tools/standard_benchmark_converter.py` | `python tools/standard_benchmark_converter.py <file.scen> <file.map> <output_prefix>`: convert a [Moving AI](https://movingai.com/benchmarks/mapf/index.html) scenario/map pair into problem files `<output_prefix>_<n>_agents.yaml` for n = 10, 20, 30, ... |
-
-The converter writes obstacles with a `!!python/tuple` tag. The C++ solvers read them, but `yaml.safe_load` rejects that tag, so rewrite the obstacle lines as plain lists (`- [x, y]`) before using the files with Python tools.
 
 ## Tests
 
